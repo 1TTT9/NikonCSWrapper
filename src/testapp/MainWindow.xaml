@@ -1,0 +1,294 @@
+﻿<Window x:Class="testapp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"       
+        xmlns:local="clr-namespace:testapp"
+        Title="Nikon Capability Explorer" Height="768" Width="1024" MinHeight="480" MinWidth="640">
+
+    <Window.Resources>
+
+        <!-- View models -->
+        <local:Model x:Key="Model"/>
+        <local:LogModel x:Key="LogModel"/>
+
+        <!-- Value converters -->
+        <local:UnsignedToString x:Key="UnsignedToString"/>
+        <local:IntegerToString x:Key="IntegerToString"/>
+        <local:FloatToString x:Key="FloatToString"/>
+        <local:BoolToVisibility x:Key="BoolToVisibility"/>
+
+        <!-- Data templates for the different capability types -->
+        <DataTemplate x:Key="EmumTemplate">
+            <ComboBox 
+                ItemsSource="{Binding EnumValues}" 
+                IsEnabled="{Binding CanSet}" 
+                SelectedIndex="{Binding EnumSelectedIndex}"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="StringTemplate">
+            <TextBox 
+                Text="{Binding CapValue}" 
+                IsEnabled="{Binding CanSet}"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="RangeTemplate">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Slider 
+                    Grid.Column="0"
+                    IsEnabled="{Binding CanSet}"
+                    Minimum="{Binding RangeMin}" 
+                    Maximum="{Binding RangeMax}" 
+                    Value="{Binding RangeValue}"/>
+                <TextBlock 
+                    Text="{Binding RangeValue}" 
+                    Grid.Column="1"/>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="GenericTemplate">
+            <TextBlock Text="{Binding CapValue}"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ProcessTemplate">
+            <Button IsEnabled="{Binding CanStart}" Click="Button_Execute_Click">
+                <TextBlock>Execute</TextBlock>
+            </Button>
+        </DataTemplate>
+
+        <DataTemplate x:Key="BooleanTemplate">
+            <CheckBox 
+                IsEnabled="{Binding CanSet}" 
+                IsChecked="{Binding CapValue}"/>
+        </DataTemplate>
+
+        <DataTemplate x:Key="UnsignedTemplate">
+            <TextBox IsEnabled="{Binding CanSet}">
+                <TextBox.Text>
+                    <Binding 
+                        Path="CapValue" 
+                        Converter="{StaticResource UnsignedToString}">
+                        <Binding.ValidationRules>
+                            <local:UnsignedValidator/>
+                        </Binding.ValidationRules>
+                    </Binding>
+                </TextBox.Text>
+            </TextBox>
+        </DataTemplate>
+
+        <DataTemplate x:Key="IntegerTemplate">
+            <TextBox IsEnabled="{Binding CanSet}">
+                <TextBox.Text>
+                    <Binding 
+                        Path="CapValue" 
+                        Converter="{StaticResource IntegerToString}">
+                        <Binding.ValidationRules>
+                            <local:IntegerValidator/>
+                        </Binding.ValidationRules>
+                    </Binding>
+                </TextBox.Text>
+            </TextBox>
+        </DataTemplate>
+
+        <DataTemplate x:Key="FloatTemplate">
+            <TextBox IsEnabled="{Binding CanSet}">
+                <TextBox.Text>
+                    <Binding 
+                        Path="CapValue" 
+                        Converter="{StaticResource FloatToString}">
+                        <Binding.ValidationRules>
+                            <local:FloatValidator/>
+                        </Binding.ValidationRules>
+                    </Binding>
+                </TextBox.Text>
+            </TextBox>
+        </DataTemplate>
+
+        <!-- Create a template selector that contains templates for the various capability types -->
+        <local:CapTypeTemplateSelector 
+            x:Key="CapTypeTemplateSelector"
+            EnumTemplate="{StaticResource EmumTemplate}"
+            StringTemplate="{StaticResource StringTemplate}"
+            RangeTemplate="{StaticResource RangeTemplate}"
+            GenericTemplate="{StaticResource GenericTemplate}"
+            ProcessTemplate="{StaticResource ProcessTemplate}"
+            BooleanTemplate="{StaticResource BooleanTemplate}"
+            UnsignedTemplate="{StaticResource UnsignedTemplate}"
+            IntegerTemplate="{StaticResource IntegerTemplate}"
+            FloatTemplate="{StaticResource FloatTemplate}"/>
+
+        <!-- Format gridview cells -->
+        <Style TargetType="ListViewItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Height" Value="28" />
+        </Style>
+
+    </Window.Resources>
+
+    <!-- Main grid -->
+    <Grid DataContext="{StaticResource Model}">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="8"/>
+            <RowDefinition Height="100" MinHeight="60"/>
+        </Grid.RowDefinitions>
+
+        <!-- Tab control -->
+        <TabControl Grid.Row="0" ItemsSource="{Binding Objects}" SelectedIndex="{Binding NewestIndex, Mode=OneWay}">
+
+            <!-- Tab title -->
+            <TabControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding ObjectName}" FontSize="20"></TextBlock>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+
+            <!-- Grid view -->
+            <TabControl.ContentTemplate>
+                <DataTemplate>
+                    <Grid>
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="300" MinWidth="200"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- List view -->                                
+                        <ListView ItemsSource="{Binding Caps}">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Name" Width="210" DisplayMemberBinding="{Binding CapTitle}"/>
+                                    <GridViewColumn Header="Value" Width="140" CellTemplateSelector="{StaticResource CapTypeTemplateSelector}"/>
+                                    <GridViewColumn Header="Type" Width="100" DisplayMemberBinding="{Binding CapTypeFriendlyName}"/>
+                                    <GridViewColumn Header="ID" Width="100" DisplayMemberBinding="{Binding CapId}"/>
+                                    <GridViewColumn Header="Numerical ID" Width="100" DisplayMemberBinding="{Binding CapNumericalId}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                        
+                        <!-- Vertical grid splitter -->
+                        <GridSplitter 
+                            Grid.Column="1" 
+                            VerticalAlignment="Stretch" 
+                            HorizontalAlignment="Stretch"/>
+
+                        <!-- Live view stuff -->
+                        <Grid Grid.Column="2">
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="24"/>
+                                <RowDefinition Height="24"/>
+                                <RowDefinition Height="24"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="24"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition/>
+                                <ColumnDefinition/>
+                            </Grid.ColumnDefinitions>
+
+                            <CheckBox 
+                                Grid.Row="0" 
+                                Grid.ColumnSpan="2" 
+                                IsChecked="{Binding ThumbnailReadyIsAttached, Mode=TwoWay}"
+                                IsEnabled="{Binding SupportsCapture}"
+                                Visibility="{Binding SupportsCapture, Converter={StaticResource BoolToVisibility}}"
+                                VerticalAlignment="Center">
+                                Acquire Thumbnails
+                            </CheckBox>
+                            
+                            <CheckBox 
+                                Grid.Row="1" 
+                                Grid.ColumnSpan="2"
+                                IsChecked="{Binding PreviewReadyIsAttached, Mode=TwoWay}"
+                                IsEnabled="{Binding SupportsPreview}" 
+                                Visibility="{Binding SupportsCapture, Converter={StaticResource BoolToVisibility}}"
+                                VerticalAlignment="Center">
+                                Acquire Previews
+                            </CheckBox>
+                            
+                            <CheckBox 
+                                Grid.Row="2" 
+                                Grid.ColumnSpan="2"
+                                IsChecked="{Binding LowResolutionPreviewReadyIsAttached, Mode=TwoWay}"
+                                IsEnabled="{Binding SupportsLowResPreview}" 
+                                Visibility="{Binding SupportsCapture, Converter={StaticResource BoolToVisibility}}"
+                                VerticalAlignment="Center">
+                                Acquire Low Resolution Previews
+                            </CheckBox>
+
+                            <!-- Live view help text -->
+                            <TextBlock 
+                                HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"
+                                Grid.Row="3"
+                                Grid.ColumnSpan="2"
+                                FontSize="20"
+                                Visibility="{Binding SupportsLiveView, Converter={StaticResource BoolToVisibility}}"
+                                Text="Live View"/>
+
+                            <!-- Live view image -->
+                            <Image 
+                                Grid.Row="3"
+                                Grid.ColumnSpan="2" 
+                                Source="{Binding LiveViewImage, Mode=OneWay}"/>
+
+                            <!-- Live view start button -->
+                            <Button 
+                                Grid.Row="4" 
+                                Grid.Column="0" 
+                                Content="Start" 
+                                IsEnabled="{Binding SupportsLiveView}" 
+                                Margin="8 0 4 0"
+                                Click="Button_StartLiveView_Click"/>
+
+                            <!-- Live view stop button -->
+                            <Button 
+                                Grid.Row="4" 
+                                Grid.Column="1" 
+                                Content="Stop" 
+                                IsEnabled="{Binding SupportsLiveView}" 
+                                Margin="4 0 8 0" 
+                                Click="Button_StopLiveView_Click"/>
+
+                        </Grid>
+                    </Grid>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+
+        </TabControl>
+
+        <!-- Horizontal grid splitter -->
+        <GridSplitter 
+            Grid.Row="1" 
+            HorizontalAlignment="Stretch" 
+            VerticalAlignment="Stretch"/>
+
+        <!-- Log -->
+        <TextBox 
+            Grid.Row="2" 
+            VerticalScrollBarVisibility="Visible" 
+            HorizontalScrollBarVisibility="Auto" 
+            IsReadOnly="True" 
+            DataContext="{StaticResource LogModel}" 
+            Text="{Binding LogText, Mode=OneWay}" 
+            FontFamily="Consolas" 
+            FontSize="11" 
+            TextChanged="TextBox_TextChanged"
+            SnapsToDevicePixels="True">
+
+            <!-- Log context menu -->
+            <TextBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Clear Log" Click="MenuItem_Click"/>
+                </ContextMenu>
+            </TextBox.ContextMenu>
+
+        </TextBox>
+    </Grid>
+</Window>
